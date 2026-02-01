@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>L'Oppresseur AI — v2.2 stable (Vercel)</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">L’Oppresseur AI</div>
+      <div class="subtitle">v2.2 stable — ui cuir/or + api multi-providers</div>
+    </div>
+    <div class="status" id="serverStatus">serveur: …</div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="generator" role="tab">🔥 générateur</button>
+    <button class="tab" data-tab="api" role="tab">🔑 api</button>
+    <button class="tab" data-tab="help" role="tab">📘 aide</button>
+  </nav>
+
+  <main class="panel">
+    <section class="tabpage active" id="tab-generator" role="tabpanel">
+      <div class="grid2">
+        <div class="card">
+          <h2>paramètres</h2>
+
+          <label>provider</label>
+          <select id="providerSelect">
+            <option value="gemini">gemini</option>
+            <option value="openai">openai</option>
+            <option value="claude">claude</option>
+          </select>
+
+          <label>model (uniquement modèles testés)</label>
+          <select id="modelSelect" disabled>
+            <option>— va dans 🔑 api pour tester —</option>
+          </select>
+
+          <label>prompt (démo)</label>
+          <textarea id="prompt" rows="7">écris une stratégie de chanson en 8 lignes, puis un couplet de 8 lignes.</textarea>
+
+          <div class="row">
+            <button id="btnGenerate" class="primary">générer</button>
+            <button id="btnClear">effacer</button>
+          </div>
+
+          <div class="hint">
+            note: en production, les clés sont définies dans les variables d’environnement vercel (pas sauvegardées dans le navigateur).
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>résultat</h2>
+          <div class="out-toolbar">
+            <button id="btnCopy">copier</button>
+          </div>
+          <pre id="output" class="output"></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="tabpage" id="tab-api" role="tabpanel">
+      <div class="grid2">
+        <div class="card">
+          <h2>tests de clés & modèles</h2>
+          <div class="hint" id="prodHint">
+            en ligne (vercel), ajoute tes clés dans <b>Project Settings → Environment Variables</b>.
+            l’app va détecter les modèles disponibles et te les proposer dans 🔥 générateur.
+          </div>
+
+          <div class="apiCard">
+            <h3>gemini</h3>
+            <div class="row">
+              <input id="geminiKey" class="keyInput" type="password" placeholder="(local seulement) colle ta clé gemini ici" />
+              <button data-provider="gemini" class="btnTest">tester</button>
+            </div>
+            <div class="small" id="geminiStatus">—</div>
+            <div class="models" id="geminiModels"></div>
+          </div>
+
+          <div class="apiCard">
+            <h3>openai</h3>
+            <div class="row">
+              <input id="openaiKey" class="keyInput" type="password" placeholder="(local seulement) colle ta clé openai ici" />
+              <button data-provider="openai" class="btnTest">tester</button>
+            </div>
+            <div class="small" id="openaiStatus">—</div>
+            <div class="models" id="openaiModels"></div>
+          </div>
+
+          <div class="apiCard">
+            <h3>claude</h3>
+            <div class="row">
+              <input id="claudeKey" class="keyInput" type="password" placeholder="(local seulement) colle ta clé anthropic ici" />
+              <button data-provider="claude" class="btnTest">tester</button>
+            </div>
+            <div class="small" id="claudeStatus">—</div>
+            <div class="models" id="claudeModels"></div>
+          </div>
+
+          <div class="hint">
+            <b>local dev:</b> lance le serveur local (voir README) pour tester avec des clés en <code>server-local/.env</code>.
+            <br/>
+            <b>vercel:</b> pas d’écriture de fichiers secrets côté serveur → utilise les env vars.
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>modèles détectés</h2>
+          <p class="small">ce panneau reflète ce que le serveur considère comme “utilisable”.</p>
+          <pre id="modelsCache" class="output"></pre>
+          <div class="row">
+            <button id="btnRefreshCache">rafraîchir</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tabpage" id="tab-help" role="tabpanel">
+      <div class="card">
+        <h2>aide rapide</h2>
+        <ol>
+          <li>déploie sur vercel via github (voir <b>INSTRUCTIONS_VERCEL_GITHUB.txt</b> dans le zip).</li>
+          <li>dans vercel: Project Settings → Environment Variables:
+            <ul>
+              <li><code>GEMINI_API_KEY</code></li>
+              <li><code>OPENAI_API_KEY</code></li>
+              <li><code>ANTHROPIC_API_KEY</code></li>
+            </ul>
+          </li>
+          <li>retourne dans l’onglet 🔑 api et clique “tester”.</li>
+          <li>dans 🔥 générateur, choisis provider + model, puis génère.</li>
+        </ol>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">L’Oppresseur AI — build vercel-ready</footer>
+  <script src="/app.js"></script>
+</body>
+</html>
