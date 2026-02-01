@@ -33,6 +33,13 @@ const state = {
 
 // ---------- Utilities ----------
 function $(id){ return document.getElementById(id); }
+
+// --- safe helpers (avoid init crashes when optional UI elements are absent)
+function on(el, evt, fn){ if(el) el.addEventListener(evt, fn); }
+function onClickById(id, fn){ const el=$(id); if(el) el.addEventListener('click', fn); }
+function setTextById(id, txt){ const el=$(id); if(el) el.textContent = txt; }
+// --------------------------------------------------------------
+
 function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
 function nowIso(){ return new Date().toISOString(); }
 function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
@@ -1005,12 +1012,12 @@ function initUI(){
   $('genre').value = 'cinematic_rap';
 
   // Explain bindings
-  $('btnExplainStructure').onclick = ()=>renderExplain('structure', $('structure').value);
-  $('btnExplainIntensity').onclick = ()=>renderExplain('intensity', $('intensity').value);
-  $('btnExplainStyle').onclick = ()=>renderExplain('style', $('writingStyle').value);
-  $('btnExplainAccent').onclick = ()=>renderExplain('accent', $('accent').value);
-  $('btnExplainGenre').onclick = ()=>renderExplain('genre', $('genre').value);
-  $('btnExplainClose').onclick = hideExplain;
+onClickById('btnExplainStructure', () => renderExplain('structure', $('structure').value));
+onClickById('btnExplainIntensity', () => renderExplain('intensity', $('intensity').value));
+onClickById('btnExplainStyle', () => renderExplain('writingStyle', $('writingStyle').value));
+onClickById('btnExplainAccent', () => renderExplain('accent', $('accent').value));
+onClickById('btnExplainGenre', () => renderExplain('genre', $('genre').value));
+onClickById('btnExplainClose', hideExplain);
 
   // Tabs
   document.querySelectorAll('.tab').forEach(t=>{

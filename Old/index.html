@@ -362,7 +362,14 @@
             </label>
           </div>
 
-          <button class="btn btn-primary generate-btn" id="generateBtn">🔥 générer (3 étapes) 🔥</button>
+          
+          <label style="margin-top:12px">modèle (validé)</label>
+          <select id="activeModelSelect" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(212,175,55,.35);background:rgba(0,0,0,.35);color:#fff;font-family:'Roboto Mono',monospace">
+            <option value="">va dans ⚙️ moteurs IA → tester</option>
+          </select>
+          <div class="hint" style="margin-top:6px">les modèles proviennent d’un test serveur avec ta clé (variables d’environnement Vercel)</div>
+
+<button class="btn btn-primary generate-btn" id="generateBtn">🔥 générer (3 étapes) 🔥</button>
 
           <div class="hint" style="margin-top:10px">
             la v2.2 force les choix à influencer la stratégie avant l’écriture, puis génère le style suno à la fin (≤ 1000 caractères)
@@ -514,84 +521,46 @@
   <div class="modal" id="settingsModal">
     <div class="modal-content">
       <button class="close-btn" id="closeSettings">✕</button>
-      <h2>⚙️ moteurs IA & clés API</h2>
+      <h2>⚙️ moteurs IA</h2>
 
       <div class="hint" style="margin-bottom:10px">
-        tu peux sauvegarder plusieurs clés, choisir un moteur actif, et tester chaque moteur sans conflit
-      </div>
-
-      <label>moteur actif</label>
-      <div class="row" style="gap:16px;margin-top:8px">
-        <label class="hint" style="display:flex;align-items:center;gap:10px;text-transform:none">
-          <input type="radio" name="provider" id="providerGemini" checked> gemini
-        </label>
-        <label class="hint" style="display:flex;align-items:center;gap:10px;text-transform:none">
-          <input type="radio" name="provider" id="providerOpenAI"> openai
-        </label>
-        <label class="hint" style="display:flex;align-items:center;gap:10px;text-transform:none">
-          <input type="radio" name="provider" id="providerClaude"> claude
-        </label>
+        les clés api sont lues uniquement depuis les variables d’environnement de vercel (aucune clé n’est stockée dans l’application)
       </div>
 
       <div class="panel" style="padding:16px;margin-top:14px;background:rgba(10,10,10,.55)">
-        <div class="row">
-          <div>
-            <label>clé gemini</label>
-            <input type="password" id="keyGemini" placeholder="AIzaSy...">
-            <label style="margin-top:10px">modèle gemini</label>
-            <input type="text" id="modelGemini" placeholder="gemini-1.5-pro">
+        <label>moteur actif</label>
+        <div class="row" style="gap:16px;margin-top:8px">
+          <label class="hint" style="display:flex;align-items:center;gap:10px;text-transform:none">
+            <input type="radio" name="provider" id="providerGemini" checked> gemini
+          </label>
+          <label class="hint" style="display:flex;align-items:center;gap:10px;text-transform:none">
+            <input type="radio" name="provider" id="providerOpenAI"> openai
+          </label>
+          <label class="hint" style="display:flex;align-items:center;gap:10px;text-transform:none">
+            <input type="radio" name="provider" id="providerClaude"> claude
+          </label>
+        </div>
+
+        <div class="row" style="margin-top:14px;align-items:flex-end">
+          <div style="flex:1">
+            <div class="hint">bouton “tester” = détecte les modèles compatibles (requête courte) et les rend disponibles dans le menu “modèle (validé)”</div>
           </div>
-          <div class="tiny" style="padding-top:36px">
-            <button class="btn btn-secondary" id="testGemini">tester</button>
+          <div class="tiny" style="display:flex;gap:10px;justify-content:flex-end">
+            <button class="btn btn-secondary" id="testGemini">tester gemini</button>
+            <button class="btn btn-secondary" id="testOpenAI">tester openai</button>
+            <button class="btn btn-secondary" id="testClaude">tester claude</button>
           </div>
         </div>
-      </div>
 
-      <div class="panel" style="padding:16px;margin-top:14px;background:rgba(10,10,10,.55)">
-        <div class="row">
-          <div>
-            <label>clé openai</label>
-            <input type="password" id="keyOpenAI" placeholder="sk-...">
-            <label style="margin-top:10px">modèle openai</label>
-            <input type="text" id="modelOpenAI" placeholder="gpt-4.1-mini">
-            <label style="margin-top:10px">endpoint openai (responses)</label>
-            <input type="url" id="openaiBase" placeholder="https://api.openai.com/v1/responses">
-          </div>
-          <div class="tiny" style="padding-top:36px">
-            <button class="btn btn-secondary" id="testOpenAI">tester</button>
-          </div>
+        <div id="apiStatus" style="margin-top:12px"></div>
+
+        <div class="hint" style="margin-top:12px">
+          variables attendues sur vercel: <b>GEMINI_API_KEY</b>, <b>OPENAI_API_KEY</b>, <b>ANTHROPIC_API_KEY</b>
         </div>
       </div>
-
-      <div class="panel" style="padding:16px;margin-top:14px;background:rgba(10,10,10,.55)">
-        <div class="row">
-          <div>
-            <label>clé claude</label>
-            <input type="password" id="keyClaude" placeholder="sk-ant-...">
-            <label style="margin-top:10px">modèle claude</label>
-            <input type="text" id="modelClaude" placeholder="claude-3-5-sonnet-latest">
-            <label style="margin-top:10px">endpoint claude (messages)</label>
-            <input type="url" id="claudeBase" placeholder="https://api.anthropic.com/v1/messages">
-          </div>
-          <div class="tiny" style="padding-top:36px">
-            <button class="btn btn-secondary" id="testClaude">tester</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="actions" style="margin-top:12px">
-        <button class="btn btn-primary" id="saveSettings">💾 sauvegarder paramètres</button>
-      </div>
-
-      <div id="apiStatus"></div>
-
-      <div class="hint" style="margin-top:12px">
-        note: selon ton environnement, openai/claude peuvent nécessiter un proxy serveur à cause de CORS. gemini marche souvent direct en front-end.
-      </div>
-    </div>
+    </div></div>
   </div>
 
-  <script src="./L_Oppresseur_AI_v2.2_DATA.js" defer></script>
-  <script src="./L_Oppresseur_AI_v2.2_LOGIC.js" defer></script>
+  <script type="module" src="./L_Oppresseur_AI_v2.2_LOGIC.js"></script>
 </body>
 </html>
