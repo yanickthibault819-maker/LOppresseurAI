@@ -1,58 +1,73 @@
-function getEnvKey(provider){
-  if(provider==="gemini") return process.env.GEMINI_API_KEY;
-  if(provider==="openai") return process.env.OPENAI_API_KEY;
-  if(provider==="claude") return process.env.ANTHROPIC_API_KEY;
-  return "";
-}
-function bad(res, code, message, http=400){ res.status(http).json({ ok:false, error:{ code, message }}); }
+export default async function handler(req, res) {
+  try{
+    if(req.method!=='POST'){ res.status(405).json({ok:false,error:'method not allowed'}); return; }
+    const { provider, model, prompt, keyOverride } = req.body || {};
+    if(!provider || !model || !prompt){ res.status(400).json({ok:false,error:'missing provider/model/prompt'}); return; }
 
-async function genGemini(apiKey, model, prompt){
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
-  const body = { contents: [{ role:"user", parts:[{ text: prompt }]}] };
-  const r = await fetch(url, { method:"POST", headers:{ "content-type":"application/json" }, body: JSON.stringify(body) });
-  const j = await r.json();
-  if(!r.ok) return { ok:false, error:{ code:"GEMINI_GENERATE_ERROR", message: j?.error?.message || "gemini generate error" } };
-  const text = j?.candidates?.[0]?.content?.parts?.map(p=>p.text).join("") || "";
-  return { ok:true, text };
-}
+    const p = String(provider).toLowerCase();
+    const key = (keyOverride||'').trim() || (p==='gemini' ? process.env.GEMINI_API_KEY :
+              p==='openai' ? process.env.OPENAI_API_KEY :
+              p==='claude' ? process.env.ANTHROPIC_API_KEY : '');
 
-async function genOpenAI(apiKey, model, prompt){
-  const r = await fetch("https://api.openai.com/v1/chat/completions", {
-    method:"POST",
-    headers:{ "content-type":"application/json", "authorization": `Bearer ${apiKey}` },
-    body: JSON.stringify({ model, messages:[{ role:"user", content: prompt }], temperature: 0.8 })
-  });
-  const j = await r.json();
-  if(!r.ok) return { ok:false, error:{ code:"OPENAI_GENERATE_ERROR", message: j?.error?.message || "openai generate error" } };
-  return { ok:true, text: j?.choices?.[0]?.message?.content || "" };
-}
+    if(!key){ res.status(400).json({ok:false,error:'aucune clé disponible (env ou saisie)'}); return; }
 
-async function genClaude(apiKey, model, prompt){
-  const r = await fetch("https://api.anthropic.com/v1/messages", {
-    method:"POST",
-    headers:{ "content-type":"application/json", "x-api-key": apiKey, "anthropic-version":"2023-06-01" },
-    body: JSON.stringify({ model, max_tokens: 1200, messages:[{ role:"user", content: prompt }] })
-  });
-  const j = await r.json();
-  if(!r.ok) return { ok:false, error:{ code:"CLAUDE_GENERATE_ERROR", message: j?.error?.message || "claude generate error" } };
-  const text = (j?.content||[]).map(x=>x.text).join("") || "";
-  return { ok:true, text };
-}
+    if(p==='gemini'){
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
+      const r = await fetch(url, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          contents:[{parts:[{text:String(prompt)}]}],
+          generationConfig:{ temperature:0.8 }
+        })
+      });
+      const js = await r.json();
+      if(!r.ok){ res.status(r.status).json({ok:false,error: js?.error?.message || 'gemini error'}); return; }
+      const text = js?.candidates?.[0]?.content?.parts?.map(p=>p.text).join('') || '';
+      res.status(200).json({ok:true, text});
+      return;
+    }
 
-export default async function handler(req,res){
-  if(req.method !== "POST") return bad(res, "METHOD_NOT_ALLOWED", "use POST", 405);
-  const { provider, model, prompt, apiKey } = req.body || {};
-  if(!provider || !model || !prompt) return bad(res, "MISSING_FIELDS", "provider/model/prompt requis");
+    if(p==='openai'){
+      const r = await fetch('https://api.openai.com/v1/responses', {
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'Authorization': `Bearer ${key}`
+        },
+        body: JSON.stringify({ model, input: String(prompt), temperature:0.8 })
+      });
+      const js = await r.json();
+      if(!r.ok){ res.status(r.status).json({ok:false,error: js?.error?.message || 'openai error'}); return; }
+      const text = js?.output_text || '';
+      res.status(200).json({ok:true, text});
+      return;
+    }
 
-  const key = (apiKey && typeof apiKey==="string" && apiKey.trim()) ? apiKey.trim() : getEnvKey(provider);
-  if(!key) return bad(res, "MISSING_KEY", "clé manquante — configure env vars sur vercel ou passe apiKey en local");
+    if(p==='claude'){
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'x-api-key': key,
+          'anthropic-version':'2023-06-01'
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 1800,
+          temperature: 0.8,
+          messages:[{ role:'user', content:String(prompt) }]
+        })
+      });
+      const js = await r.json();
+      if(!r.ok){ res.status(r.status).json({ok:false,error: js?.error?.message || js?.error || 'claude error'}); return; }
+      const text = (js?.content||[]).map(x=>x.text||'').join('') || '';
+      res.status(200).json({ok:true, text});
+      return;
+    }
 
-  let out;
-  if(provider==="gemini") out = await genGemini(key, model, prompt);
-  else if(provider==="openai") out = await genOpenAI(key, model, prompt);
-  else if(provider==="claude") out = await genClaude(key, model, prompt);
-  else return bad(res, "UNKNOWN_PROVIDER", "provider inconnu");
-
-  if(!out.ok) return res.status(401).json({ ok:false, provider, error: out.error });
-  res.status(200).json({ ok:true, provider, model, text: out.text });
+    res.status(400).json({ok:false,error:'provider inconnu'});
+  }catch(e){
+    res.status(500).json({ok:false,error:e?.message||String(e)});
+  }
 }

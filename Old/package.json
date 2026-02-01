@@ -1,12 +1,8 @@
 {
-  "name": "lopresseur-ai-vercel",
+  "name": "lopresseur-ai-v2-2",
   "private": true,
   "type": "module",
-  "scripts": {
-    "dev": "node server-local/dev-server.js"
-  },
-  "dependencies": {
-    "express": "^4.19.2",
-    "dotenv": "^16.4.5"
+  "engines": {
+    "node": ">=18"
   }
 }

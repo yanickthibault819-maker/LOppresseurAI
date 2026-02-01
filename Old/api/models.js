@@ -1,23 +1,10 @@
 export default async function handler(req, res) {
   try {
-    // Allow same endpoint to be used from browser UI (POST) or direct tests (GET)
-    if (req.method === 'OPTIONS') {
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-      res.status(204).end();
-      return;
-    }
-
-    const isPost = req.method === 'POST';
-    const isGet  = req.method === 'GET';
-    if (!isPost && !isGet) {
+    if (req.method !== 'POST') {
       res.status(405).json({ ok:false, error:'method not allowed' });
       return;
     }
-
-    const payload = isPost ? (req.body || {}) : (req.query || {});
-    const { provider, keyOverride } = payload;
+    const { provider, keyOverride } = req.body || {};
     if (!provider) { res.status(400).json({ok:false, error:'missing provider'}); return; }
 
     const p = String(provider).toLowerCase();
