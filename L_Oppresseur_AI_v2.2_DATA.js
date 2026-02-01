@@ -4,10 +4,8 @@
 */
 
 'use strict';
-
-export const APP_VERSION = 'v2.2 ULTIMATE';
-
-export const STRUCTURES = [
+const APP_VERSION = 'v2.2 ULTIMATE';
+const STRUCTURES = [
   {
     id:'classic_3v_hook',
     label:'classic (intro + verse1 + hook + verse2 + hook + verse3 + hook + outro)',
@@ -172,8 +170,7 @@ export const STRUCTURES = [
     useWhen:['branding', 'singles', 'commercial']
   }
 ];
-
-export const EMOTIONAL_INTENSITIES = [
+const EMOTIONAL_INTENSITIES = [
   { id:'whispered_fragile', label:'whispered fragile', group:'internal', description:'low-volume emotional openness, careful words, shaky honesty, small details that hit hard', cues:['short sentences','confessions','soft tension'], energy:1 },
   { id:'vulnerable', label:'vulnerable', group:'internal', description:'open wound but proud, admits pain without self-hate, real talk, grounded', cues:['human','direct','no theatrics'], energy:2 },
   { id:'melancholic', label:'melancholic', group:'internal', description:'sad but lucid, reflective, memory-heavy, quiet nights and long thoughts', cues:['images of time','regret','calm'], energy:2 },
@@ -195,8 +192,7 @@ export const EMOTIONAL_INTENSITIES = [
   { id:'unstoppable', label:'unstoppable', group:'elevation', description:'machine mode, relentless forward force', cues:['repetition','mantras'], energy:8 },
   { id:'reflective_pride', label:'reflective pride', group:'special', description:'proud without ego, calm testimony', cues:['gratitude','facts'], energy:5 }
 ];
-
-export const WRITING_STYLES = [
+const WRITING_STYLES = [
   {
     id:'oppresseur_qc_conscious',
     label:"l'oppresseur — rap conscient québécois",
@@ -279,8 +275,7 @@ export const WRITING_STYLES = [
     rules:['varied line lengths','strong imagery','clear delivery']
   }
 ];
-
-export const ACCENTS_REGIONS = [
+const ACCENTS_REGIONS = [
   { id:'qc_mtl_street', label:'québec — montréal street', group:'québec', description:'regional phrasing, street realism, punchy cadence, no forced contractions', examples:['ça clanche','pour vrai','j’ai compris'] },
   { id:'qc_clean', label:'québec — clean', group:'québec', description:'clear québécois without heavy slang, precise articulation', examples:['c’est clair','je reste droit'] },
   { id:'fr_paris', label:'france — paris', group:'france', description:'standard french rap diction, clean syntax, punchy modern phrases', examples:['j’avance','j’assume'] },
@@ -289,8 +284,7 @@ export const ACCENTS_REGIONS = [
   { id:'ca_fr_neutral', label:'canada francophone — neutre', group:'canada', description:'neutral canadian french, clear, minimal slang', examples:['je continue','ça fait du sens'] },
   { id:'intl_fr', label:'international francophone', group:'intl', description:'neutral global french, avoids very local idioms', examples:['je progresse','je résiste'] }
 ];
-
-export const MUSIC_GENRES = [
+const MUSIC_GENRES = [
   { id:'boom_bap', label:'boom bap', group:'hip-hop', description:'classic drums, swing, sample vibe; lyrical focus' },
   { id:'boom_bap_dark', label:'dark boom bap', group:'hip-hop', description:'minor keys, dusty samples, heavy drums' },
   { id:'trap', label:'trap', group:'trap', description:'808s, crisp hats, modern bounce' },
@@ -316,13 +310,11 @@ export const MUSIC_GENRES = [
   { id:'metal_rap', label:'metal rap', group:'fusion', description:'heavy guitars, aggressive rhythms' },
   { id:'soul_rap', label:'soul rap', group:'fusion', description:'soul samples / chords, warm emotional tone' }
 ];
-
-export const GENRE_HELP = {
+const GENRE_HELP = {
   title:'guide des genres',
   body:'Chaque genre influence le groove, l’espace entre les lignes, et le type de hook. Choisis le genre avant de générer pour que l’écriture colle au beat.'
 };
-
-export const DEFAULT_TEMPLATES = [
+const DEFAULT_TEMPLATES = [
   {
     category:'🔥 lutte & résilience',
     templates:[
@@ -346,3 +338,17 @@ export const DEFAULT_TEMPLATES = [
     ]
   }
 ];
+
+
+// expose to non-module usage
+window.OPP_DATA = window.OPP_DATA || {};
+Object.assign(window.OPP_DATA, {
+  APP_VERSION,
+  STRUCTURES,
+  EMOTIONAL_INTENSITIES,
+  WRITING_STYLES,
+  ACCENTS_REGIONS,
+  MUSIC_GENRES,
+  GENRE_HELP,
+  DEFAULT_TEMPLATES
+});

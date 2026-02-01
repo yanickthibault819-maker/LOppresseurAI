@@ -1,6 +1,14 @@
 export default async function handler(req, res) {
   try{
-    if(req.method!=='POST'){ res.status(405).json({ok:false,error:'method not allowed'}); return; }
+    if (req.method === 'OPTIONS') {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      res.status(204).end();
+      return;
+    }
+
+    if(req.method!=='POST'){ res.status(405).json({ok:false,error:'method not allowed (use POST)'}); return; }
     const { provider, model, prompt, keyOverride } = req.body || {};
     if(!provider || !model || !prompt){ res.status(400).json({ok:false,error:'missing provider/model/prompt'}); return; }
 

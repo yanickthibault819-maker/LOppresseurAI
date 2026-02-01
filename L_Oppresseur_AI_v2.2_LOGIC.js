@@ -7,7 +7,7 @@
 
 'use strict';
 
-import {
+const {
   APP_VERSION,
   STRUCTURES,
   EMOTIONAL_INTENSITIES,
@@ -15,7 +15,7 @@ import {
   ACCENTS_REGIONS,
   MUSIC_GENRES,
   DEFAULT_TEMPLATES
-} from './L_Oppresseur_AI_v2.2_DATA.js';
+} = (window.OPP_DATA || {});
 
 const DB_NAME = 'oppresseur_v22';
 const DB_VERSION = 1;
@@ -374,10 +374,13 @@ function fillSelect(selectEl, items, placeholder){
     op.textContent = placeholder;
     selectEl.appendChild(op);
   }
-  for(const it of items){
+  for(const it of (items||[])){
     const op = document.createElement('option');
     op.value = it.id;
     op.textContent = it.label;
+    // Tooltip per option (works in most desktop browsers when the dropdown is open)
+    const tip = (it.description || (Array.isArray(it.notes) ? it.notes.join(' • ') : '') || (Array.isArray(it.useWhen) ? ('utile pour: '+it.useWhen.join(', ')) : '')).trim();
+    if(tip) op.title = tip;
     selectEl.appendChild(op);
   }
 }
