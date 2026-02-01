@@ -1,8 +1,0 @@
-{
-  "name": "lopresseur-ai-v2-2",
-  "private": true,
-  "type": "module",
-  "engines": {
-    "node": ">=18"
-  }
-}
