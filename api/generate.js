@@ -1,81 +1,79 @@
 export default async function handler(req, res) {
   try{
-    if (req.method === 'OPTIONS') {
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-      res.status(204).end();
-      return;
-    }
+    res.setHeader('Access-Control-Allow-Origin','*');
+    res.setHeader('Access-Control-Allow-Methods','POST,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers','Content-Type');
+    if(req.method==='OPTIONS'){ res.status(204).end(); return; }
 
-    if(req.method!=='POST'){ res.status(405).json({ok:false,error:'method not allowed (use POST)'}); return; }
-    const { provider, model, prompt, keyOverride } = req.body || {};
+    if(req.method!=='POST'){ res.status(405).json({ok:false,error:'method not allowed'}); return; }
+
+    const { provider, model, prompt } = req.body || {};
     if(!provider || !model || !prompt){ res.status(400).json({ok:false,error:'missing provider/model/prompt'}); return; }
 
     const p = String(provider).toLowerCase();
-    const key = (keyOverride||'').trim() || (p==='gemini' ? process.env.GEMINI_API_KEY :
-              p==='openai' ? process.env.OPENAI_API_KEY :
-              p==='claude' ? process.env.ANTHROPIC_API_KEY : '');
-
-    if(!key){ res.status(400).json({ok:false,error:'aucune clé disponible (env ou saisie)'}); return; }
+    const m = String(model).trim();
+    const textPrompt = String(prompt);
 
     if(p==='gemini'){
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
-      const r = await fetch(url, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({
-          contents:[{parts:[{text:String(prompt)}]}],
-          generationConfig:{ temperature:0.8 }
-        })
-      });
-      const js = await r.json();
-      if(!r.ok){ res.status(r.status).json({ok:false,error: js?.error?.message || 'gemini error'}); return; }
-      const text = js?.candidates?.[0]?.content?.parts?.map(p=>p.text).join('') || '';
-      res.status(200).json({ok:true, text});
-      return;
+      const key = (process.env.GEMINI_API_KEY||'').trim();
+      if(!key){ res.status(400).json({ok:false,error:'missing GEMINI_API_KEY (vercel env)'}); return; }
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent?key=${encodeURIComponent(key)}`;
+      const body = { contents: [{ role:'user', parts:[{ text: textPrompt }]}] };
+
+      const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      const j = await r.json().catch(()=>({}));
+      if(!r.ok){
+        const msg = (j && (j.error?.message || j.message)) || ('gemini error '+r.status);
+        res.status(r.status).json({ok:false,error:msg,raw:j}); return;
+      }
+      const out = j.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('') || '';
+      res.status(200).json({ok:true,text:out,raw:j}); return;
     }
 
     if(p==='openai'){
+      const key = (process.env.OPENAI_API_KEY||'').trim();
+      if(!key){ res.status(400).json({ok:false,error:'missing OPENAI_API_KEY (vercel env)'}); return; }
+
       const r = await fetch('https://api.openai.com/v1/responses', {
         method:'POST',
-        headers:{
-          'Content-Type':'application/json',
-          'Authorization': `Bearer ${key}`
-        },
-        body: JSON.stringify({ model, input: String(prompt), temperature:0.8 })
+        headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},
+        body: JSON.stringify({ model:m, input:textPrompt })
       });
-      const js = await r.json();
-      if(!r.ok){ res.status(r.status).json({ok:false,error: js?.error?.message || 'openai error'}); return; }
-      const text = js?.output_text || '';
-      res.status(200).json({ok:true, text});
-      return;
+      const j = await r.json().catch(()=>({}));
+      if(!r.ok){
+        const msg = (j && (j.error?.message || j.message)) || ('openai error '+r.status);
+        res.status(r.status).json({ok:false,error:msg,raw:j}); return;
+      }
+      // Try multiple possible fields
+      let out = '';
+      if(typeof j.output_text === 'string') out = j.output_text;
+      else if(Array.isArray(j.output)){
+        out = j.output.map(o=> (o.content||[]).map(c=>c.text||'').join('')).join('');
+      }
+      res.status(200).json({ok:true,text:out,raw:j}); return;
     }
 
     if(p==='claude'){
+      const key = (process.env.ANTHROPIC_API_KEY||'').trim();
+      if(!key){ res.status(400).json({ok:false,error:'missing ANTHROPIC_API_KEY (vercel env)'}); return; }
+
       const r = await fetch('https://api.anthropic.com/v1/messages', {
         method:'POST',
-        headers:{
-          'Content-Type':'application/json',
-          'x-api-key': key,
-          'anthropic-version':'2023-06-01'
-        },
-        body: JSON.stringify({
-          model,
-          max_tokens: 1800,
-          temperature: 0.8,
-          messages:[{ role:'user', content:String(prompt) }]
-        })
+        headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
+        body: JSON.stringify({ model:m, max_tokens: 1500, messages:[{role:'user', content:textPrompt}] })
       });
-      const js = await r.json();
-      if(!r.ok){ res.status(r.status).json({ok:false,error: js?.error?.message || js?.error || 'claude error'}); return; }
-      const text = (js?.content||[]).map(x=>x.text||'').join('') || '';
-      res.status(200).json({ok:true, text});
-      return;
+      const j = await r.json().catch(()=>({}));
+      if(!r.ok){
+        const msg = (j && (j.error?.message || j.message)) || ('claude error '+r.status);
+        res.status(r.status).json({ok:false,error:msg,raw:j}); return;
+      }
+      const out = (j.content||[]).map(c=>c.text||'').join('') || '';
+      res.status(200).json({ok:true,text:out,raw:j}); return;
     }
 
-    res.status(400).json({ok:false,error:'provider inconnu'});
-  }catch(e){
-    res.status(500).json({ok:false,error:e?.message||String(e)});
+    res.status(400).json({ok:false,error:'unknown provider'});
+  }catch(err){
+    res.status(500).json({ok:false,error:err?.message||String(err)});
   }
 }
