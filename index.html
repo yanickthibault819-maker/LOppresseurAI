@@ -558,7 +558,19 @@
           variables attendues sur vercel: <b>GEMINI_API_KEY</b>, <b>OPENAI_API_KEY</b>, <b>ANTHROPIC_API_KEY</b>
         </div>
       </div>
-    </div></div>
+
+      <!-- Hidden fields for compatibility -->
+      <input type="hidden" id="keyGemini" value="">
+      <input type="hidden" id="keyOpenAI" value="">
+      <input type="hidden" id="keyClaude" value="">
+      <input type="hidden" id="openaiBase" value="https://api.openai.com/v1/chat/completions">
+      <input type="hidden" id="claudeBase" value="https://api.anthropic.com/v1/messages">
+      <input type="hidden" id="modelGemini" value="gemini-1.5-flash">
+      <input type="hidden" id="modelOpenAI" value="gpt-4o-mini">
+      <input type="hidden" id="modelClaude" value="claude-3-5-haiku-latest">
+      <button class="btn btn-secondary" id="saveSettings" style="display:none">save</button>
+
+    </div>
   </div>
 
   <script type="module" src="./L_Oppresseur_AI_v2.2_LOGIC.js"></script>
