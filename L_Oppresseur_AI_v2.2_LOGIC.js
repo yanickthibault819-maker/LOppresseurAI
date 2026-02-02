@@ -123,6 +123,29 @@ const LS_KEYS = {
   modelClaude:'v22_model_claude'
 };
 
+
+function renderRuntimeModels(models){
+  const sel = document.getElementById('runtimeModel');
+  if(!sel) return;
+  sel.innerHTML = '';
+  if(!models || !models.length){
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = 'aucun modèle validé';
+    sel.appendChild(opt);
+    sel.disabled = true;
+    return;
+  }
+  for(const m of models){
+    const opt = document.createElement('option');
+    opt.value = m.id || m;
+    opt.textContent = m.label || m.id || m;
+    sel.appendChild(opt);
+  }
+  sel.disabled = false;
+  // select first by default if empty
+  if(!sel.value) sel.value = (models[0].id || models[0]);
+}
 // ----- Model detection (via server /api/models) -----
 const DETECTED_KEY = 'lop_ai_detected_models_v1'; // localStorage JSON
 
@@ -133,9 +156,7 @@ function saveDetectedModels(obj){
   localStorage.setItem(DETECTED_KEY, JSON.stringify(obj||{}));
 }
 function getKeyOverride(provider){
-  if(provider==='gemini') return (localStorage.getItem('lop_api_gemini_key')||'').trim();
-  if(provider==='openai') return (localStorage.getItem('lop_api_openai_key')||'').trim();
-  if(provider==='claude') return (localStorage.getItem('lop_api_anthropic_key')||'').trim();
+  // clés uniquement via Vercel env (aucune clé dans l'app)
   return '';
 }
 function setKeyOverride(provider, val){
@@ -145,77 +166,20 @@ function setKeyOverride(provider, val){
   if(provider==='claude') localStorage.setItem('lop_api_anthropic_key', v);
 }
 function getSelectedModel(provider){
-  // prefers user selection in dropdown; fallback to detected list; then default
-  if(provider==='gemini') return (localStorage.getItem(LS_KEYS.modelGemini)||'gemini-1.5-pro').trim();
-  if(provider==='openai') return (localStorage.getItem(LS_KEYS.modelOpenAI)||'gpt-4.1-mini').trim();
-  return (localStorage.getItem(LS_KEYS.modelClaude)||'claude-3-5-sonnet-latest').trim();
+  // priorité: select runtime (dans l'onglet générateur)
+  const runtime = document.getElementById('runtimeModel');
+  if(runtime && runtime.value) return runtime.value;
+
+  if(provider==='gemini') return ($('modelGemini')?.value || 'gemini-1.5-flash').trim();
+  if(provider==='openai') return ($('modelOpenAI')?.value || 'gpt-4o-mini').trim();
+  if(provider==='claude') return ($('modelClaude')?.value || 'claude-3-5-haiku-latest').trim();
+  return '';
 }
 async function detectModels(provider, keyOverride){
   const res = await fetch('/api/models', {
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({provider, keyOverride: (keyOverride||'').trim()})
-  });
-  const js = await res.json().catch(()=>({}));
-  if(!res.ok || !js.ok) throw new Error(js.error || ('erreur models '+res.status));
-  return js.models || [];
-}
-
-function loadSettingsToUI(){
-  // api keys are server-side only
-  // settings modal kept for theme/ux only
-  return;
-}
-
-function saveSettingsFromUI(){
-  // api keys are server-side only
-  toast('✅ paramètres sauvegardés', 'success');
-  return;
-}
-
-
-function getChosenModel(){
-  const sel = $("aiModel");
-  if(sel && sel.value){
-    try{ return JSON.parse(sel.value); }catch(e){}
-  }
-  const saved = localStorage.getItem("v22_model");
-  if(saved && saved.includes(":")){
-    const [provider,id] = saved.split(":");
-    return {provider,id};
-  }
-  return {provider:"gemini", id:""};
-}
-
-function getActiveProvider(){
-  const chosen = getChosenModel();
-  return chosen.provider || "gemini";
-}
-
-function getActiveKey(_provider){
-  // keys are server-side only
-  return null;
-}
-
-function getSelectedModel(provider){
-  const chosen = getChosenModel();
-  if(provider && chosen.provider && provider !== chosen.provider) return "";
-  return chosen.id || "";
-}
-
-function getKeyOverride(_provider){ return null; }
-function setKeyOverride(_provider,_value){ /* no-op */ }
-function getSelectedModel(provider){
-  // prefers user selection in dropdown; fallback to detected list; then default
-  if(provider==='gemini') return (localStorage.getItem(LS_KEYS.modelGemini)||'gemini-1.5-pro').trim();
-  if(provider==='openai') return (localStorage.getItem(LS_KEYS.modelOpenAI)||'gpt-4.1-mini').trim();
-  return (localStorage.getItem(LS_KEYS.modelClaude)||'claude-3-5-sonnet-latest').trim();
-}
-async function detectModels(provider, keyOverride){
-  const res = await fetch('/api/models', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({provider, keyOverride: (keyOverride||'').trim()})
+    body: JSON.stringify({provider})
   });
   const js = await res.json().catch(()=>({}));
   if(!res.ok || !js.ok) throw new Error(js.error || ('erreur models '+res.status));
@@ -345,12 +309,11 @@ async function callClaude(key, baseUrl, model, prompt){
 async function callLLM(prompt){
   const provider = getActiveProvider();
   const model = getSelectedModel(provider);
-  const keyOverride = getKeyOverride(provider); // may be empty => server uses env
   const payload = { provider, model, prompt };
   const res = await fetch('/api/generate', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({...payload, keyOverride})
+    body: JSON.stringify(payload)
   });
   const js = await res.json().catch(()=>({}));
   if(!res.ok || !js.ok){
@@ -1093,137 +1056,47 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 });
 
 
-
 function initApiTab(){
-  const providersBox = $("apiProvidersBox");
-  const modelsBox = $("apiModelsBox");
-  const envStatus = $("apiEnvStatus");
-  const btnRefresh = $("btnRefreshModels");
-  const btnValidate = $("btnValidateModels");
+  const elGem = document.getElementById('api_gemini_key');
+  const elOai = document.getElementById('api_openai_key');
+  const elAnt = document.getElementById('api_anthropic_key');
+  if(elGem) elGem.value = getKeyOverride('gemini');
+  if(elOai) elOai.value = getKeyOverride('openai');
+  if(elAnt) elAnt.value = getKeyOverride('claude');
 
-  const providerSel = $("aiProvider");
-  const modelSel = $("aiModel");
+  const dump = document.getElementById('modelsDump');
+  const setDump = (obj)=>{ if(dump) dump.textContent = JSON.stringify(obj,null,2); };
 
-  let state = { providers:{}, merged:[], byProvider:{} };
+  const statusGem = document.getElementById('api_gemini_status');
+  const statusOai = document.getElementById('api_openai_status');
+  const statusAnt = document.getElementById('api_anthropic_status');
 
-  function renderApiBoxes(){
-    if(envStatus){
-      const active = Object.entries(state.providers).filter(([k,v])=>v && v.available).map(([k])=>k);
-      envStatus.textContent = "statut: " + (active.length ? ("keys détectées: " + active.join(", ")) : "aucune clé détectée");
-    }
-    if(providersBox){
-      providersBox.textContent = JSON.stringify(state.providers, null, 2);
-    }
-    if(modelsBox){
-      const list = state.merged.map(m=>`${m.provider}: ${m.id}`).join("
-");
-      modelsBox.textContent = list || "aucun modèle validé (teste via le bouton 🧪)";
-    }
-  }
-
-  function fillProviderModel(){
-    if(!providerSel || !modelSel) return;
-
-    const prevProvider = localStorage.getItem("v22_provider") || "auto";
-    providerSel.innerHTML = "";
-    const optAuto = document.createElement("option");
-    optAuto.value = "auto";
-    optAuto.textContent = "auto (meilleur dispo)";
-    providerSel.appendChild(optAuto);
-
-    Object.keys(state.byProvider).forEach(p=>{
-      if(!state.byProvider[p]?.length) return;
-      const o = document.createElement("option");
-      o.value = p;
-      o.textContent = p;
-      providerSel.appendChild(o);
-    });
-
-    providerSel.value = (prevProvider === "auto" || state.byProvider[prevProvider]?.length) ? prevProvider : "auto";
-
-    function rebuildModelOptions(){
-      const p = providerSel.value;
-      const prevModel = localStorage.getItem("v22_model") || "";
-      let models = [];
-      if(p === "auto"){
-        models = state.merged;
-      } else {
-        models = (state.byProvider[p] || []).map(id=>({provider:p,id}));
-      }
-
-      modelSel.innerHTML = "";
-      if(!models.length){
-        const o = document.createElement("option");
-        o.value = "";
-        o.textContent = "aucun modèle (va dans 🔑 api → tester)";
-        modelSel.appendChild(o);
-        return;
-      }
-
-      models.forEach(m=>{
-        const o = document.createElement("option");
-        o.value = JSON.stringify({provider:m.provider, id:m.id});
-        o.textContent = `${m.provider}: ${m.id}`;
-        modelSel.appendChild(o);
-      });
-
-      const match = models.find(m=> (m.provider+":"+m.id) === prevModel);
-      if(match){
-        modelSel.value = JSON.stringify({provider:match.provider, id:match.id});
-      } else {
-        modelSel.selectedIndex = 0;
-      }
-
-      try{
-        const chosen = JSON.parse(modelSel.value);
-        localStorage.setItem("v22_model", chosen.provider+":"+chosen.id);
-      }catch{}
-    }
-
-    providerSel.onchange = ()=>{
-      localStorage.setItem("v22_provider", providerSel.value);
-      rebuildModelOptions();
-    };
-    modelSel.onchange = ()=>{
-      try{
-        const chosen = JSON.parse(modelSel.value);
-        localStorage.setItem("v22_model", chosen.provider+":"+chosen.id);
-      }catch{}
-    };
-
-    rebuildModelOptions();
-  }
-
-  async function loadModels(validate=false){
+  async function doTest(provider){
+    const key = provider==='gemini' ? (elGem?.value||'') : provider==='openai' ? (elOai?.value||'') : (elAnt?.value||'');
+    setKeyOverride(provider, key);
+    const statusEl = provider==='gemini' ? statusGem : provider==='openai' ? statusOai : statusAnt;
+    if(statusEl) statusEl.textContent = 'test en cours...';
     try{
-      if(envStatus) envStatus.textContent = validate ? "statut: test en cours..." : "statut: chargement...";
-      const res = await fetch(`/api/models${validate ? "?validate=1" : ""}`, { method:"GET" });
-      const data = await res.json();
-      if(!res.ok) throw new Error(data?.error || ("http "+res.status));
-      state.providers = data.providers || {};
-      state.merged = data.merged || [];
-      state.byProvider = data.byProvider || {};
-      renderApiBoxes();
-      fillProviderModel();
-      if(validate) toast("✅ modèles validés", "success");
-    }catch(e){
-      console.error(e);
-      if(envStatus) envStatus.textContent = "statut: erreur";
-      toast("❌ erreur api", "error");
+      const models = await detectModels(provider, key);
+      const all = loadDetectedModels();
+      all[provider] = models;
+      saveDetectedModels(all);
+      if(statusEl) statusEl.textContent = `ok: ${models.length} modèle(s) détecté(s)`;
+      setDump(all);
+      // refresh generator model dropdown if present
+      try{ refreshProviderModelsUI(); }catch{}
+    }catch(err){
+      if(statusEl) statusEl.textContent = 'erreur: '+(err?.message||err);
     }
   }
 
-  if(btnRefresh) btnRefresh.onclick = ()=> loadModels(false);
-  if(btnValidate) btnValidate.onclick = ()=> loadModels(true);
+  document.getElementById('btnTestGemini')?.addEventListener('click', ()=>doTest('gemini'));
+  document.getElementById('btnTestOpenAI')?.addEventListener('click', ()=>doTest('openai'));
+  document.getElementById('btnTestClaude')?.addEventListener('click', ()=>doTest('claude'));
 
-  const bProv = $("btnExplainProvider");
-  const bModel = $("btnExplainModel");
-  if(bProv) bProv.onclick = ()=> toast("Provider = service IA (Gemini/OpenAI/Claude). Auto choisit le meilleur disponible.", "info");
-  if(bModel) bModel.onclick = ()=> toast("Modèles = ceux testés/validés par ta clé (via 🔑 api).", "info");
-
-  loadModels(false);
+  // initial dump from storage
+  setDump(loadDetectedModels());
 }
-
 
 function refreshProviderModelsUI(){
   // update model dropdown lists using detected models (if any)
@@ -1235,7 +1108,8 @@ function refreshProviderModelsUI(){
   const mapId = { gemini:'modelGemini', openai:'modelOpenAI', claude:'modelClaude' };
   const id = mapId[provider];
   const dd = document.getElementById(id);
-  if(!dd) return;
+  // dd peut ne pas exister (input texte). On met quand même à jour le select runtime.
+  if(!dd){ renderRuntimeModels(list); return; }
   // if your UI uses a select element:
   if(dd.tagName==='SELECT'){
     dd.innerHTML = '';
@@ -1246,5 +1120,8 @@ function refreshProviderModelsUI(){
       dd.appendChild(opt);
     });
   }
+}
+  // runtime select in generator
+  renderRuntimeModels(list);
 }
 

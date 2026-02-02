@@ -33,13 +33,6 @@ const state = {
 
 // ---------- Utilities ----------
 function $(id){ return document.getElementById(id); }
-
-// --- safe helpers (avoid init crashes when optional UI elements are absent)
-function on(el, evt, fn){ if(el) el.addEventListener(evt, fn); }
-function onClickById(id, fn){ const el=$(id); if(el) el.addEventListener('click', fn); }
-function setTextById(id, txt){ const el=$(id); if(el) el.textContent = txt; }
-// --------------------------------------------------------------
-
 function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
 function nowIso(){ return new Date().toISOString(); }
 function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
@@ -139,41 +132,12 @@ function loadDetectedModels(){
 function saveDetectedModels(obj){
   localStorage.setItem(DETECTED_KEY, JSON.stringify(obj||{}));
 }
-
-function refreshModelSelect(){
-  const provider = getActiveProvider();
-  const sel = $('activeModelSelect');
-  if(!sel) return;
-
-  const detected = loadDetectedModels() || {};
-  const list = Array.isArray(detected[provider]) ? detected[provider] : [];
-  sel.innerHTML = '';
-
-  const opt0 = document.createElement('option');
-  opt0.value = '';
-  opt0.textContent = list.length ? 'sélectionner un modèle' : 'va dans ⚙️ moteurs IA → tester';
-  sel.appendChild(opt0);
-
-  for(const item of list){
-    const id = (item && (item.id || item.name || item.value)) ? (item.id || item.name || item.value) : String(item);
-    const label = (item && item.label) ? item.label : id;
-    const opt = document.createElement('option');
-    opt.value = id;
-    opt.textContent = label;
-    sel.appendChild(opt);
-  }
-
-  // Auto-select first validated model if none selected
-  if(list.length){
-    const current = sel.value;
-    if(!current || current===''){
-      const first = list[0];
-      const id = (first && (first.id || first.name || first.value)) ? (first.id || first.name || first.value) : String(first);
-      sel.value = id;
-    }
-  }
+function getKeyOverride(provider){
+  if(provider==='gemini') return (localStorage.getItem('lop_api_gemini_key')||'').trim();
+  if(provider==='openai') return (localStorage.getItem('lop_api_openai_key')||'').trim();
+  if(provider==='claude') return (localStorage.getItem('lop_api_anthropic_key')||'').trim();
+  return '';
 }
-function getKeyOverride(provider){ return ""; }
 function setKeyOverride(provider, val){
   const v=(val||'').trim();
   if(provider==='gemini') localStorage.setItem('lop_api_gemini_key', v);
@@ -181,24 +145,81 @@ function setKeyOverride(provider, val){
   if(provider==='claude') localStorage.setItem('lop_api_anthropic_key', v);
 }
 function getSelectedModel(provider){
-  const sel = $('activeModelSelect');
-  if(sel && sel.value) return String(sel.value).trim();
-
-  const detected = loadDetectedModels() || {};
-  const arr = detected[String(provider||'').toLowerCase()];
-  if(Array.isArray(arr) && arr.length){
-    const first = arr[0];
-    return (first && (first.id || first.name || first.value || first)) + '';
-  }
-  if(provider==='gemini') return 'gemini-1.5-flash';
-  if(provider==='openai') return 'gpt-4o-mini';
-  return 'claude-3-5-haiku-latest';
+  // prefers user selection in dropdown; fallback to detected list; then default
+  if(provider==='gemini') return (localStorage.getItem(LS_KEYS.modelGemini)||'gemini-1.5-pro').trim();
+  if(provider==='openai') return (localStorage.getItem(LS_KEYS.modelOpenAI)||'gpt-4.1-mini').trim();
+  return (localStorage.getItem(LS_KEYS.modelClaude)||'claude-3-5-sonnet-latest').trim();
 }
-async function detectModels(provider){
-  const p = encodeURIComponent(String(provider||'').toLowerCase());
-  const res = await fetch(`/api/models?provider=${p}`, { method:'GET' });
+async function detectModels(provider, keyOverride){
+  const res = await fetch('/api/models', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({provider, keyOverride: (keyOverride||'').trim()})
+  });
   const js = await res.json().catch(()=>({}));
-  return js;
+  if(!res.ok || !js.ok) throw new Error(js.error || ('erreur models '+res.status));
+  return js.models || [];
+}
+
+function loadSettingsToUI(){
+  // api keys are server-side only
+  // settings modal kept for theme/ux only
+  return;
+}
+
+function saveSettingsFromUI(){
+  // api keys are server-side only
+  toast('✅ paramètres sauvegardés', 'success');
+  return;
+}
+
+
+function getChosenModel(){
+  const sel = $("aiModel");
+  if(sel && sel.value){
+    try{ return JSON.parse(sel.value); }catch(e){}
+  }
+  const saved = localStorage.getItem("v22_model");
+  if(saved && saved.includes(":")){
+    const [provider,id] = saved.split(":");
+    return {provider,id};
+  }
+  return {provider:"gemini", id:""};
+}
+
+function getActiveProvider(){
+  const chosen = getChosenModel();
+  return chosen.provider || "gemini";
+}
+
+function getActiveKey(_provider){
+  // keys are server-side only
+  return null;
+}
+
+function getSelectedModel(provider){
+  const chosen = getChosenModel();
+  if(provider && chosen.provider && provider !== chosen.provider) return "";
+  return chosen.id || "";
+}
+
+function getKeyOverride(_provider){ return null; }
+function setKeyOverride(_provider,_value){ /* no-op */ }
+function getSelectedModel(provider){
+  // prefers user selection in dropdown; fallback to detected list; then default
+  if(provider==='gemini') return (localStorage.getItem(LS_KEYS.modelGemini)||'gemini-1.5-pro').trim();
+  if(provider==='openai') return (localStorage.getItem(LS_KEYS.modelOpenAI)||'gpt-4.1-mini').trim();
+  return (localStorage.getItem(LS_KEYS.modelClaude)||'claude-3-5-sonnet-latest').trim();
+}
+async function detectModels(provider, keyOverride){
+  const res = await fetch('/api/models', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({provider, keyOverride: (keyOverride||'').trim()})
+  });
+  const js = await res.json().catch(()=>({}));
+  if(!res.ok || !js.ok) throw new Error(js.error || ('erreur models '+res.status));
+  return js.models || [];
 }
 
 function loadSettingsToUI(){
@@ -324,11 +345,12 @@ async function callClaude(key, baseUrl, model, prompt){
 async function callLLM(prompt){
   const provider = getActiveProvider();
   const model = getSelectedModel(provider);
+  const keyOverride = getKeyOverride(provider); // may be empty => server uses env
   const payload = { provider, model, prompt };
   const res = await fetch('/api/generate', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify(payload)
+    body: JSON.stringify({...payload, keyOverride})
   });
   const js = await res.json().catch(()=>({}));
   if(!res.ok || !js.ok){
@@ -962,15 +984,14 @@ async function testProvider(provider){
   localStorage.setItem(LS_KEYS.provider, provider);
 
   const status = $('apiStatus');
-  status.innerHTML = `<div class="status info">détection des modèles en cours...</div>`;
+  status.innerHTML = `<div class="status info">test en cours...</div>`;
   try{
-    const js = await detectModels(provider);
-    if(!js || !js.ok){ throw new Error(js?.error || 'échec'); }
-    const detected = loadDetectedModels();
-    detected[provider] = js.models || [];
-    saveDetectedModels(detected);
-    refreshModelSelect();
-    status.innerHTML = `<div class="status success">✅ ${provider}: ${ (js.models||[]).length } modèle(s) validé(s)</div>`;
+    const txt = await callLLM('réponds uniquement: ok');
+    if((txt||'').toLowerCase().includes('ok')){
+      status.innerHTML = `<div class="status success">✅ ${provider}: ok</div>`;
+    }else{
+      status.innerHTML = `<div class="status success">✅ ${provider}: réponse reçue</div>`;
+    }
   }catch(e){
     status.innerHTML = `<div class="status error">❌ ${provider}: ${escapeHtml(e.message||String(e))}</div>`;
   }
@@ -1012,12 +1033,12 @@ function initUI(){
   $('genre').value = 'cinematic_rap';
 
   // Explain bindings
-onClickById('btnExplainStructure', () => renderExplain('structure', $('structure').value));
-onClickById('btnExplainIntensity', () => renderExplain('intensity', $('intensity').value));
-onClickById('btnExplainStyle', () => renderExplain('writingStyle', $('writingStyle').value));
-onClickById('btnExplainAccent', () => renderExplain('accent', $('accent').value));
-onClickById('btnExplainGenre', () => renderExplain('genre', $('genre').value));
-onClickById('btnExplainClose', hideExplain);
+  $('btnExplainStructure').onclick = ()=>renderExplain('structure', $('structure').value);
+  $('btnExplainIntensity').onclick = ()=>renderExplain('intensity', $('intensity').value);
+  $('btnExplainStyle').onclick = ()=>renderExplain('style', $('writingStyle').value);
+  $('btnExplainAccent').onclick = ()=>renderExplain('accent', $('accent').value);
+  $('btnExplainGenre').onclick = ()=>renderExplain('genre', $('genre').value);
+  $('btnExplainClose').onclick = hideExplain;
 
   // Tabs
   document.querySelectorAll('.tab').forEach(t=>{
@@ -1049,13 +1070,9 @@ onClickById('btnExplainClose', hideExplain);
   $('testGemini').onclick = ()=>testProvider('gemini');
   $('testOpenAI').onclick = ()=>testProvider('openai');
   $('testClaude').onclick = ()=>testProvider('claude');
-  $('providerGemini').onchange = refreshModelSelect;
-  $('providerOpenAI').onchange = refreshModelSelect;
-  $('providerClaude').onchange = refreshModelSelect;
 
   // Version label
   $('versionBadge').textContent = APP_VERSION;
-  refreshModelSelect();
 }
 
 // Main
@@ -1076,47 +1093,137 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 });
 
 
+
 function initApiTab(){
-  const elGem = document.getElementById('api_gemini_key');
-  const elOai = document.getElementById('api_openai_key');
-  const elAnt = document.getElementById('api_anthropic_key');
-  if(elGem) elGem.value = getKeyOverride('gemini');
-  if(elOai) elOai.value = getKeyOverride('openai');
-  if(elAnt) elAnt.value = getKeyOverride('claude');
+  const providersBox = $("apiProvidersBox");
+  const modelsBox = $("apiModelsBox");
+  const envStatus = $("apiEnvStatus");
+  const btnRefresh = $("btnRefreshModels");
+  const btnValidate = $("btnValidateModels");
 
-  const dump = document.getElementById('modelsDump');
-  const setDump = (obj)=>{ if(dump) dump.textContent = JSON.stringify(obj,null,2); };
+  const providerSel = $("aiProvider");
+  const modelSel = $("aiModel");
 
-  const statusGem = document.getElementById('api_gemini_status');
-  const statusOai = document.getElementById('api_openai_status');
-  const statusAnt = document.getElementById('api_anthropic_status');
+  let state = { providers:{}, merged:[], byProvider:{} };
 
-  async function doTest(provider){
-    const key = provider==='gemini' ? (elGem?.value||'') : provider==='openai' ? (elOai?.value||'') : (elAnt?.value||'');
-    
-    const statusEl = provider==='gemini' ? statusGem : provider==='openai' ? statusOai : statusAnt;
-    if(statusEl) statusEl.textContent = 'test en cours...';
-    try{
-      const models = await detectModels(provider, key);
-      const all = loadDetectedModels();
-      all[provider] = models;
-      saveDetectedModels(all);
-      if(statusEl) statusEl.textContent = `ok: ${models.length} modèle(s) détecté(s)`;
-      setDump(all);
-      // refresh generator model dropdown if present
-      try{ refreshProviderModelsUI(); }catch{}
-    }catch(err){
-      if(statusEl) statusEl.textContent = 'erreur: '+(err?.message||err);
+  function renderApiBoxes(){
+    if(envStatus){
+      const active = Object.entries(state.providers).filter(([k,v])=>v && v.available).map(([k])=>k);
+      envStatus.textContent = "statut: " + (active.length ? ("keys détectées: " + active.join(", ")) : "aucune clé détectée");
+    }
+    if(providersBox){
+      providersBox.textContent = JSON.stringify(state.providers, null, 2);
+    }
+    if(modelsBox){
+      const list = state.merged.map(m=>`${m.provider}: ${m.id}`).join("
+");
+      modelsBox.textContent = list || "aucun modèle validé (teste via le bouton 🧪)";
     }
   }
 
-  document.getElementById('btnTestGemini')?.addEventListener('click', ()=>doTest('gemini'));
-  document.getElementById('btnTestOpenAI')?.addEventListener('click', ()=>doTest('openai'));
-  document.getElementById('btnTestClaude')?.addEventListener('click', ()=>doTest('claude'));
+  function fillProviderModel(){
+    if(!providerSel || !modelSel) return;
 
-  // initial dump from storage
-  setDump(loadDetectedModels());
+    const prevProvider = localStorage.getItem("v22_provider") || "auto";
+    providerSel.innerHTML = "";
+    const optAuto = document.createElement("option");
+    optAuto.value = "auto";
+    optAuto.textContent = "auto (meilleur dispo)";
+    providerSel.appendChild(optAuto);
+
+    Object.keys(state.byProvider).forEach(p=>{
+      if(!state.byProvider[p]?.length) return;
+      const o = document.createElement("option");
+      o.value = p;
+      o.textContent = p;
+      providerSel.appendChild(o);
+    });
+
+    providerSel.value = (prevProvider === "auto" || state.byProvider[prevProvider]?.length) ? prevProvider : "auto";
+
+    function rebuildModelOptions(){
+      const p = providerSel.value;
+      const prevModel = localStorage.getItem("v22_model") || "";
+      let models = [];
+      if(p === "auto"){
+        models = state.merged;
+      } else {
+        models = (state.byProvider[p] || []).map(id=>({provider:p,id}));
+      }
+
+      modelSel.innerHTML = "";
+      if(!models.length){
+        const o = document.createElement("option");
+        o.value = "";
+        o.textContent = "aucun modèle (va dans 🔑 api → tester)";
+        modelSel.appendChild(o);
+        return;
+      }
+
+      models.forEach(m=>{
+        const o = document.createElement("option");
+        o.value = JSON.stringify({provider:m.provider, id:m.id});
+        o.textContent = `${m.provider}: ${m.id}`;
+        modelSel.appendChild(o);
+      });
+
+      const match = models.find(m=> (m.provider+":"+m.id) === prevModel);
+      if(match){
+        modelSel.value = JSON.stringify({provider:match.provider, id:match.id});
+      } else {
+        modelSel.selectedIndex = 0;
+      }
+
+      try{
+        const chosen = JSON.parse(modelSel.value);
+        localStorage.setItem("v22_model", chosen.provider+":"+chosen.id);
+      }catch{}
+    }
+
+    providerSel.onchange = ()=>{
+      localStorage.setItem("v22_provider", providerSel.value);
+      rebuildModelOptions();
+    };
+    modelSel.onchange = ()=>{
+      try{
+        const chosen = JSON.parse(modelSel.value);
+        localStorage.setItem("v22_model", chosen.provider+":"+chosen.id);
+      }catch{}
+    };
+
+    rebuildModelOptions();
+  }
+
+  async function loadModels(validate=false){
+    try{
+      if(envStatus) envStatus.textContent = validate ? "statut: test en cours..." : "statut: chargement...";
+      const res = await fetch(`/api/models${validate ? "?validate=1" : ""}`, { method:"GET" });
+      const data = await res.json();
+      if(!res.ok) throw new Error(data?.error || ("http "+res.status));
+      state.providers = data.providers || {};
+      state.merged = data.merged || [];
+      state.byProvider = data.byProvider || {};
+      renderApiBoxes();
+      fillProviderModel();
+      if(validate) toast("✅ modèles validés", "success");
+    }catch(e){
+      console.error(e);
+      if(envStatus) envStatus.textContent = "statut: erreur";
+      toast("❌ erreur api", "error");
+    }
+  }
+
+  if(btnRefresh) btnRefresh.onclick = ()=> loadModels(false);
+  if(btnValidate) btnValidate.onclick = ()=> loadModels(true);
+
+  const bProv = $("btnExplainProvider");
+  const bModel = $("btnExplainModel");
+  if(bProv) bProv.onclick = ()=> toast("Provider = service IA (Gemini/OpenAI/Claude). Auto choisit le meilleur disponible.", "info");
+  if(bModel) bModel.onclick = ()=> toast("Modèles = ceux testés/validés par ta clé (via 🔑 api).", "info");
+
+  loadModels(false);
 }
+
 
 function refreshProviderModelsUI(){
   // update model dropdown lists using detected models (if any)

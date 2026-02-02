@@ -295,7 +295,6 @@
       <button class="tab" data-tab="editor">📝 éditeur</button>
       <button class="tab" data-tab="comparison">🔄 comparaison</button>
       <button class="tab" data-tab="stats">📊 stats</button>
-      <button class="tab" data-tab="api">🔑 api</button>
     </div>
 
     <!-- GENERATOR -->
@@ -357,38 +356,21 @@
             </div>
           </div>
 
-
-          <div class="row" style="margin-top:10px">
-            <div>
-              <label>🤖 ai provider</label>
-              <select id="aiProvider">
-                <option value="auto">auto</option>
-              </select>
-            </div>
-            <div class="tiny" style="padding-top:36px">
-              <button class="info-btn" id="btnExplainProvider" title="détail">ℹ️</button>
-            </div>
-          </div>
-
-          <div class="row" style="margin-top:10px">
-            <div>
-              <label>🧠 modèle (validé)</label>
-              <select id="aiModel">
-                <option value="">chargement...</option>
-              </select>
-            </div>
-            <div class="tiny" style="padding-top:36px">
-              <button class="info-btn" id="btnExplainModel" title="détail">ℹ️</button>
-            </div>
-          </div>
-
           <div style="margin-top:12px">
             <label class="hint" style="display:flex;align-items:center;gap:10px;text-transform:none;font-weight:600">
               <input type="checkbox" id="showStrategy" style="width:auto"> afficher la stratégie (étape 1)
             </label>
           </div>
 
-          <button class="btn btn-primary generate-btn" id="generateBtn">🔥 générer (3 étapes) 🔥</button>
+          <button class="btn btn-primary generate-btn" 
+          <div>
+            <label>modèle ia (validé)</label>
+            <select id="runtimeModel" class="select">
+              <option value="">chargement...</option>
+            </select>
+            <div class="hint">les modèles sont détectés via les clés dans les variables d’environnement de vercel.</div>
+          </div>
+id="generateBtn">🔥 générer (3 étapes) 🔥</button>
 
           <div class="hint" style="margin-top:10px">
             la v2.2 force les choix à influencer la stratégie avant l’écriture, puis génère le style suno à la fin (≤ 1000 caractères)
@@ -523,42 +505,7 @@
           </div>
         </div>
       </div>
-    </div
-  <div id="api" class="tab-content">
-    <div class="panel">
-      <h2>🔑 api</h2>
-      <div class="muted" style="margin-top:-8px">
-        Les clés API ne sont <b>pas</b> entrées dans l’application. Elles viennent uniquement des variables d’environnement sur Vercel.
-      </div>
-
-      <div class="row" style="margin-top:14px;gap:10px;flex-wrap:wrap">
-        <button class="btn" id="btnRefreshModels">🔄 rafraîchir</button>
-        <button class="btn gold" id="btnValidateModels">🧪 tester les modèles</button>
-        <span class="pill" id="apiEnvStatus">statut: ...</span>
-      </div>
-
-      <div class="glassPanel" style="margin-top:14px">
-        <div class="label">providers détectés</div>
-        <pre id="apiProvidersBox" class="codeBox" style="min-height:90px">chargement...</pre>
-      </div>
-
-      <div class="glassPanel" style="margin-top:14px">
-        <div class="label">modèles validés</div>
-        <pre id="apiModelsBox" class="codeBox" style="min-height:160px">aucun</pre>
-      </div>
-
-      
-      <div class="glassPanel">
-        <div class="label">🔑 api (vercel env)</div>
-        <div class="muted">
-          Les clés sont gérées uniquement dans Vercel (<code>Environment Variables</code>).<br>
-          Va dans l’onglet <b>🔑 api</b> pour tester et voir les modèles détectés.
-        </div>
-      </div>
->
     </div>
-  </div>
->
   </div>
 
   <!-- Explain Box -->
@@ -596,7 +543,7 @@
 
       <div class="panel" style="padding:16px;margin-top:14px;background:rgba(10,10,10,.55)">
         <div class="row">
-          <div>
+          <div style="display:none">
             <label>clé gemini</label>
             <input type="password" id="keyGemini" placeholder="AIzaSy...">
             <label style="margin-top:10px">modèle gemini</label>
@@ -610,7 +557,7 @@
 
       <div class="panel" style="padding:16px;margin-top:14px;background:rgba(10,10,10,.55)">
         <div class="row">
-          <div>
+          <div style="display:none">
             <label>clé openai</label>
             <input type="password" id="keyOpenAI" placeholder="sk-...">
             <label style="margin-top:10px">modèle openai</label>
@@ -626,7 +573,7 @@
 
       <div class="panel" style="padding:16px;margin-top:14px;background:rgba(10,10,10,.55)">
         <div class="row">
-          <div>
+          <div style="display:none">
             <label>clé claude</label>
             <input type="password" id="keyClaude" placeholder="sk-ant-...">
             <label style="margin-top:10px">modèle claude</label>

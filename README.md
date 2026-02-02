@@ -87,3 +87,12 @@ Pour tester les endpoints `/api`, le plus simple est d’utiliser Vercel (car le
 - L’onglet 🔑 api accepte une clé “override” (stockée dans ton navigateur) si tu veux tester rapidement — mais en prod, mieux = env vars.
 
 Bon build 🤝
+
+
+## Vercel env (obligatoire)
+
+- GEMINI_API_KEY = ta clé Google Gemini (Generative Language API)
+- (optionnel) OPENAI_API_KEY
+- (optionnel) CLAUDE_API_KEY
+
+L'app ne demande plus les clés dans l'interface: tout passe par les variables d'environnement Vercel.
