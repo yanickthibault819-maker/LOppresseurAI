@@ -8,6 +8,14 @@
     {
       "src": "*.html",
       "use": "@vercel/static"
+    },
+    {
+      "src": "L_Oppresseur_AI_v2.2_LOGIC.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "L_Oppresseur_AI_v2.2_DATA.js",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
