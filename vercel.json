@@ -24,20 +24,6 @@
       "dest": "/api/$1"
     },
     {
-      "src": "/(.*\\.js)$",
-      "dest": "/$1",
-      "headers": {
-        "Content-Type": "application/javascript; charset=utf-8"
-      }
-    },
-    {
-      "src": "/(.*\\.css)$",
-      "dest": "/$1",
-      "headers": {
-        "Content-Type": "text/css; charset=utf-8"
-      }
-    },
-    {
       "handle": "filesystem"
     },
     {
