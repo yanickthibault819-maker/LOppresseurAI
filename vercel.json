@@ -6,15 +6,11 @@
       "use": "@vercel/node"
     },
     {
-      "src": "index.html",
+      "src": "*.html",
       "use": "@vercel/static"
     },
     {
-      "src": "L_Oppresseur_AI_v2.2_*.js",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "assets/**",
+      "src": "*.js",
       "use": "@vercel/static"
     }
   ],
@@ -22,6 +18,20 @@
     {
       "src": "/api/(.*)",
       "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*\\.js)$",
+      "dest": "/$1",
+      "headers": {
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "src": "/(.*\\.css)$",
+      "dest": "/$1",
+      "headers": {
+        "Content-Type": "text/css; charset=utf-8"
+      }
     },
     {
       "handle": "filesystem"
